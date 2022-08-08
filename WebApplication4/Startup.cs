@@ -143,12 +143,10 @@ namespace WebApplication4
             int Id { get; set; }
             string Name { get; set; } = "";
             string Surname { get; set; } = "";
-            string Phone { get; set; } = "";
+            private string Phone { get; set; } = "";
             int CompanyId { get; set; }
-            Passport Type { get; set; }
-            Passport Number { get; set; }
-            Department Name { get; set; }
-            Department Phone { get; set; }
+            Passport Passport { get; set; }
+            Department Department { get; set; }
         }
         
 
