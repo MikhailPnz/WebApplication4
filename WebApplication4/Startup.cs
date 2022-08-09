@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Builder;
+п»їusing Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using WebApplication4.Models;
 
 namespace WebApplication4
 {
@@ -17,52 +18,111 @@ namespace WebApplication4
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
+            string connectionString = "Host=pg_container;Username=root;Password=root;Database=test_db";
+            services.AddTransient<IEmployeeRepository, EmployeeRepository>(provider => new EmployeeRepository(connectionString));
+            //services.AddControllersWithViews();
         }
 
-        // начальные данные
-        List<Person> users = new List<Person>
+        // РЅР°С‡Р°Р»СЊРЅС‹Рµ РґР°РЅРЅС‹Рµ
+        List<Employee> employes = new List<Employee>
         {
-            new() { Id = Guid.NewGuid().ToString(), Name = "Tom", Age = 37 },
-            new() { Id = Guid.NewGuid().ToString(), Name = "Bob", Age = 41 },
-            new() { Id = Guid.NewGuid().ToString(), Name = "Sam", Age = 24 }
+            new()
+            {
+                Id = 25,
+                Name = "Р”РёРјР°",
+                Surname = "РџРµС‚СЂРѕРІ",
+                Phone = "354353",
+                CompanyId = new Random().Next(1, 13),
+                Passport = new Passport("Ordinary Passport", Guid.NewGuid().ToString()),
+                Department = new  Department("Ozon", "67868684")
+            },
+
+            new()
+            {
+                Id = 32,
+                Name = "РђР»Р»Р°",
+                Surname = "РЎРµСЂРіРµРµРІР°",
+                Phone = "8687687",
+                CompanyId = new Random().Next(1, 13),
+                Passport = new Passport("Ordinary Passport", Guid.NewGuid().ToString()),
+                Department = new  Department("Oriflame", "456345645")
+            },
+
+            new()
+            {
+                Id = 41,
+                Name = "РРІР°РЅ",
+                Surname = "РРІР°РЅРѕРІ",
+                Phone = "7865789",
+                CompanyId = new Random().Next(1, 13),
+                Passport = new Passport("Ordinary Passport", Guid.NewGuid().ToString()),
+                Department = new  Department("Ozon", "654645654")
+            }
         };
 
-        // получение всех пользователей
+        // РїРѕР»СѓС‡РµРЅРёРµ РІСЃРµС… РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
         async Task GetAllPeople(HttpResponse response)
         {
-            await response.WriteAsJsonAsync(users);
+            await response.WriteAsJsonAsync(employes);
         }
-        // получение одного пользователя по id
-        async Task GetPerson(string? id, HttpResponse response)
+        // РїРѕР»СѓС‡РµРЅРёРµ РѕРґРЅРѕРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»В¤ РїРѕ id
+        async Task GetPerson(int? id, HttpResponse response)
         {
-            // получаем пользователя по id
-            Person? user = users.FirstOrDefault((u) => u.Id == id);
-            // если пользователь найден, отправляем его
-            if (user != null)
-                await response.WriteAsJsonAsync(user);
-            // если не найден, отправляем статусный код и сообщение об ошибке
+            // РїРѕР»СѓС‡Р°РµРј РїРѕР»СЊР·РѕРІР°С‚РµР»В¤ РїРѕ id
+            Employee? emploe = employes.FirstOrDefault((u) => u.Id == id);
+            // РµСЃР»Рё РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅР°Р№РґРµРЅ, РѕС‚РїСЂР°РІР»В¤РµРј РµРіРѕ
+            if (emploe != null)
+                await response.WriteAsJsonAsync(emploe);
+            // РµСЃР»Рё РЅРµ РЅР°Р№РґРµРЅ, РѕС‚РїСЂР°РІР»В¤РµРј СЃС‚Р°С‚СѓСЃРЅС‹Р№ РєРѕРґ Рё СЃРѕРѕР±С‰РµРЅРёРµ РѕР± РѕС€РёР±РєРµ
             else
             {
                 response.StatusCode = 404;
-                await response.WriteAsJsonAsync(new { message = "Пользователь не найден" });
+                await response.WriteAsJsonAsync(new { message = "РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РЅР°Р№РґРµРЅ" });
             }
         }
 
-        async Task DeletePerson(string? id, HttpResponse response)
+        // РїРѕР»СѓС‡РµРЅРёРµ СЃРїРёСЃРєР° СЂР°Р±РѕС‚РЅРёРєРѕРІ РїРѕ РЅР°Р·РІР°РЅРёСЋ РєРѕРјРїР°РЅРёРё
+        async Task GetEmployeForDepName(string? depName, HttpResponse response)
         {
-            // получаем пользователя по id
-            Person? user = users.FirstOrDefault((u) => u.Id == id);
-            // если пользователь найден, удаляем его
-            if (user != null)
+            bool search = false;
+            List<Employee> employesTemp = new List<Employee>();
+
+            foreach (var employe in employes)
             {
-                users.Remove(user);
-                await response.WriteAsJsonAsync(user);
+                if (employe.Department.Name == depName)
+                {
+                    employesTemp.Add(employe);
+                    search = true;
+                }
             }
-            // если не найден, отправляем статусный код и сообщение об ошибке
+
+            if (search)
+            {
+                await response.WriteAsJsonAsync(employesTemp);
+                employesTemp.Clear();
+            }
             else
             {
                 response.StatusCode = 404;
-                await response.WriteAsJsonAsync(new { message = "Пользователь не найден" });
+                await response.WriteAsJsonAsync(new { message = "РЎРѕРІРїР°РґРµРЅРёР№ РЅРµ РЅР°Р№РґРµРЅРѕ" });
+            }
+        }
+
+        async Task DeletePerson(int? id, HttpResponse response)
+        {
+            // РїРѕР»СѓС‡Р°РµРј РїРѕР»СЊР·РѕРІР°С‚РµР»В¤ РїРѕ id
+            Employee? employe = employes.FirstOrDefault((u) => u.Id == id);
+            // РµСЃР»Рё РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅР°Р№РґРµРЅ, СѓРґР°Р»В¤РµРј РµРіРѕ
+            if (employe != null)
+            {
+                employes.Remove(employe);
+                await response.WriteAsJsonAsync(employe);
+            }
+            // РµСЃР»Рё РЅРµ РЅР°Р№РґРµРЅ, РѕС‚РїСЂР°РІР»В¤РµРј СЃС‚Р°С‚СѓСЃРЅС‹Р№ РєРѕРґ Рё СЃРѕРѕР±С‰РµРЅРёРµ РѕР± РѕС€РёР±РєРµ
+            else
+            {
+                response.StatusCode = 404;
+                await response.WriteAsJsonAsync(new { message = "вЂ”РѕС‚СЂСѓРґРЅРёРє РЅРµ РЅР°Р№РґРµРЅ" });
             }
         }
 
@@ -70,25 +130,25 @@ namespace WebApplication4
         {
             try
             {
-                // получаем данные пользователя
-                var user = await request.ReadFromJsonAsync<Person>();
-                if (user != null)
+                // РїРѕР»СѓС‡Р°РµРј РґР°РЅРЅС‹Рµ РїРѕР»СЊР·РѕРІР°С‚РµР»В¤
+                var employe = await request.ReadFromJsonAsync<Employee>();
+                if (employe != null)
                 {
-                    // устанавливаем id для нового пользователя
-                    user.Id = Guid.NewGuid().ToString();
-                    // добавляем пользователя в список
-                    users.Add(user);
-                    await response.WriteAsJsonAsync(user);
+                    // СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј id РґР»В¤ РЅРѕРІРѕРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»В¤
+                    //employe.Id = new Random().Next(1, 13);
+                    // РґРѕР±Р°РІР»В¤РµРј РїРѕР»СЊР·РѕРІР°С‚РµР»В¤ РІ СЃРїРёСЃРѕРє
+                    employes.Add(employe);
+                    await response.WriteAsJsonAsync(employe.Id);
                 }
                 else
                 {
-                    throw new Exception("Некорректные данные");
+                    throw new Exception("РЊРµРєРѕСЂСЂРµРєС‚РЅС‹Рµ РґР°РЅРЅС‹Рµ");
                 }
             }
             catch (Exception)
             {
                 response.StatusCode = 400;
-                await response.WriteAsJsonAsync(new { message = "Некорректные данные" });
+                await response.WriteAsJsonAsync(new { message = "РЊРµРєРѕСЂСЂРµРєС‚РЅС‹Рµ РґР°РЅРЅС‹Рµ" });
             }
         }
 
@@ -96,59 +156,46 @@ namespace WebApplication4
         {
             try
             {
-                // получаем данные пользователя
-                Person? userData = await request.ReadFromJsonAsync<Person>();
+                // РїРѕР»СѓС‡Р°РµРј РґР°РЅРЅС‹Рµ РїРѕР»СЊР·РѕРІР°С‚РµР»В¤
+                Employee? userData = await request.ReadFromJsonAsync<Employee>();
                 if (userData != null)
                 {
-                    // получаем пользователя по id
-                    var user = users.FirstOrDefault(u => u.Id == userData.Id);
-                    // если пользователь найден, изменяем его данные и отправляем обратно клиенту
-                    if (user != null)
+                    // foreach (var param in context.Request.Query)
+                    // РїРѕР»СѓС‡Р°РµРј РїРѕР»СЊР·РѕРІР°С‚РµР»В¤ РїРѕ id
+                    var employe = employes.FirstOrDefault(u => u.Id == userData.Id);
+                    // РµСЃР»Рё РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅР°Р№РґРµРЅ, РёР·РјРµРЅВ¤РµРј РµРіРѕ РґР°РЅРЅС‹Рµ Рё РѕС‚РїСЂР°РІР»В¤РµРј РѕР±СЂР°С‚РЅРѕ РєР»РёРµРЅС‚Сѓ
+                    if (employe != null)
                     {
-                        user.Age = userData.Age;
-                        user.Name = userData.Name;
-                        await response.WriteAsJsonAsync(user);
+                        employe.Id = userData.Id;
+                        employe.Name = userData.Name;
+                        employe.Surname = userData.Surname;
+                        employe.Phone = userData.Phone;
+                        employe.CompanyId = userData.CompanyId;
+                        employe.Passport = userData.Passport; // РёСЃРїСЂР°РІРёС‚СЊ
+                        employe.Department = userData.Department;
+
+                        await response.WriteAsJsonAsync(employe.Id);
                     }
                     else
                     {
                         response.StatusCode = 404;
-                        await response.WriteAsJsonAsync(new { message = "Пользователь не найден" });
+                        await response.WriteAsJsonAsync(new { message = "С•РѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РЅР°Р№РґРµРЅ" });
                     }
                 }
                 else
                 {
-                    throw new Exception("Некорректные данные");
+                    throw new Exception("РЊРµРєРѕСЂСЂРµРєС‚РЅС‹Рµ РґР°РЅРЅС‹Рµ");
                 }
             }
             catch (Exception)
             {
                 response.StatusCode = 400;
-                await response.WriteAsJsonAsync(new { message = "Некорректные данные" });
+                await response.WriteAsJsonAsync(new { message = "РЊРµРєРѕСЂСЂРµРєС‚РЅС‹Рµ РґР°РЅРЅС‹Рµ" });
             }
         }
 
-        public class Passport
-        {
-            string Type { get; set; } = "";
-            string Number { get; set; } = "";
-        }
-        public class Department
-        {
-            string Name { get; set; } = "";
-            string Phone { get; set; } = "";
-        }
-
-        public class Employee
-        {
-            int Id { get; set; }
-            string Name { get; set; } = "";
-            string Surname { get; set; } = "";
-            private string Phone { get; set; } = "";
-            int CompanyId { get; set; }
-            Passport Passport { get; set; }
-            Department Department { get; set; }
-        }
         
+
 
 
 
@@ -173,20 +220,47 @@ namespace WebApplication4
                 var response = context.Response;
                 var request = context.Request;
                 var path = request.Path;
-                //string expressionForNumber = "^/api/users/([0 - 9]+)$";   // если id представляет число
+                
+                //string expressionForNumber = "^/api/users/([0 - 9]+)$";   // РµСЃР»Рё id РїСЂРµРґСЃС‚Р°РІР»В¤РµС‚ С‡РёСЃР»Рѕ
 
                 // 2e752824-1657-4c7f-844b-6ec2e168e99c
-                string expressionForGuid = @"^/api/users/\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$";
-                if (path == "/api/users" && request.Method == "GET")
+                //string expressionForGuid = @"^/api/users/\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$";
+                string expressionForGuid = @"^/api/users/$";
+                if (request.Method == "GET")
                 {
-                    await GetAllPeople(response);
+                    if (path == "/api/users")
+                    {
+                        await GetAllPeople(response);
+                    }
+
+                    if (Regex.IsMatch(path, @"^/api/users/\d{3}$"))
+                    {
+                        string? id = path.Value?.Split("/")[3];
+                        await GetPerson(int.Parse(id), response);
+                    }
+
+                    //if (Regex.IsMatch(path, @"^/api/users/\d{3}$"))
+                    //{
+                        string? departmentName = path.Value?.Split("/")[3];
+                        await GetEmployeForDepName(departmentName, response);
+                    //}
+
+
                 }
-                else if (Regex.IsMatch(path, expressionForGuid) && request.Method == "GET")
-                {
-                    // получаем id из адреса url
-                    string? id = path.Value?.Split("/")[3];
-                    await GetPerson(id, response);
-                }
+                //else if (Regex.IsMatch(path, expressionForGuid) && request.Method == "GET")
+                //{
+                //    // РїРѕР»СѓС‡Р°РµРј id РёР· Р°РґСЂРµСЃР° url
+                //    string? id = path.Value?.Split("/")[3];
+                //    await GetPerson(int.Parse(id), response);
+                //}
+                // Р’С‹РІРѕРґРёС‚СЊ СЃРїРёСЃРѕРє СЃРѕС‚СЂСѓРґРЅРёРєРѕРІ РґР»СЏ СѓРєР°Р·Р°РЅРЅРѕР№ РєРѕРјРїР°РЅРёРё.
+                //else if (Regex.IsMatch(path, expressionForGuid) && request.Method == "GET")
+                //{
+                //    // РїРѕР»СѓС‡Р°РµРј id РёР· Р°РґСЂРµСЃР° url
+                //    string? departmentName = path.Value?.Split("/")[3];
+                //    await GetEmployeForDepName(departmentName, response);
+                //}
+                // Ж’РѕР±Р°РІР»В¤С‚СЊ СЃРѕС‚СЂСѓРґРЅРёРєРѕРІ, РІ РѕС‚РІРµС‚ РґРѕР»Р¶РµРЅ РїСЂРёС…РѕРґРёС‚СЊ Id РґРѕР±Р°РІР»РµРЅРЅРѕРіРѕ СЃРѕС‚СЂСѓРґРЅРёРєР°.
                 else if (path == "/api/users" && request.Method == "POST")
                 {
                     await CreatePerson(response, request);
@@ -195,16 +269,22 @@ namespace WebApplication4
                 {
                     await UpdatePerson(response, request);
                 }
-                else if (Regex.IsMatch(path, expressionForGuid) && request.Method == "DELETE")
+                // вЂќРґР°Р»В¤С‚СЊ СЃРѕС‚СЂСѓРґРЅРёРєРѕРІ РїРѕ Id.
+                //else if (Regex.IsMatch(path, expressionForGuid) && request.Method == "DELETE")
+                else if (request.Method == "DELETE")
                 {
+                    //if (Regex.IsMatch(path, expressionForGuid))
+                    //{
+
+                    //}
                     string? id = path.Value?.Split("/")[3];
-                    await DeletePerson(id, response);
+                    await DeletePerson(int.Parse(id), response);
                 }
-                else
-                {
-                    response.ContentType = "text/html; charset=utf-8";
-                    //await response.SendFileAsync("html/index.html");
-                }
+                //else
+                //{
+                //    response.ContentType = "text/html; charset=utf-8";
+                //    //await response.SendFileAsync("html/index.html");
+                //}
             });
         }
     }

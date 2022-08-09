@@ -1,0 +1,21 @@
+version: '3.4'
+
+services:
+  webapplication4:
+    image: ${DOCKER_REGISTRY-}webapplication4
+    build:
+      context: .
+      dockerfile: WebApplication4/Dockerfile
+    depends_on:
+      - db
+
+  db:
+    container_name: pg_container
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: test_db
+    ports:
+      - "5432:5432"  
