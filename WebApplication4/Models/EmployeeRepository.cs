@@ -9,7 +9,7 @@ namespace WebApplication4.Models
 {
     public interface IEmployeeRepository
     {
-        void Create(Employee employee);
+        Employee Create(Employee employee);
         void Delete(int id);
         Employee Get(int id);
         List<Employee> GetEmployees();
@@ -24,7 +24,7 @@ namespace WebApplication4.Models
             connectionString = conn;
         }
 
-        public void Create(Employee employee)
+        public Employee Create(Employee employee)
         {
             using (var connection = new NpgsqlConnection(connectionString))
             {
@@ -48,9 +48,10 @@ namespace WebApplication4.Models
                 //    name varchar(100) not null unique-- ?
                 //);
 
-                var sqlQuery = "INSERT INTO Employee (Id, Name, Surname, Phone, CompanyId) VALUES(@Id, @Name, @Surname, @Phone, @CompanyId) RETURNING id";
+                var sqlQuery = "INSERT INTO Employee (Name) VALUES(@Name) RETURNING id";
                 int? userId = connection.Execute(sqlQuery, employee);
                 employee.Id = userId.Value;
+                return employee;
             }
         }
 

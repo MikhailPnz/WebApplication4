@@ -8,18 +8,30 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Dapper;
+using Npgsql;
 using WebApplication4.Models;
 
 namespace WebApplication4
 {
     public class Startup
     {
+        IEmployeeRepository _repo;
         // This method gets called by the runtime. Use this method to add services to the container.
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
             string connectionString = "Host=pg_container;Username=root;Password=root;Database=test_db";
-            services.AddTransient<IEmployeeRepository, EmployeeRepository>(provider => new EmployeeRepository(connectionString));
+            _repo = new EmployeeRepository(connectionString);
+            //using (var connection = new NpgsqlConnection(connectionString))
+            //{
+            //    connection.Open();
+            //    connection.Execute("CREATE TABLE Employee (id serial primary key, Name CHARACTER VARYING(30), Surname CHARACTER VARYING(30)," +
+            //                       "Phone  CHARACTER VARYING(30), PasportName CHARACTER VARYING(30), PasportNumber CHARACTER VARYING(30)," +
+            //                       "DepName CHARACTER VARYING(30), DepPhone CHARACTER VARYING(30));");
+            //}
+            //connection.Execute("CREATE TABLE Users (Id INTEGER, Name CHARACTER VARYING(30), Age INTEGER);");
+            //services.AddTransient<IEmployeeRepository, EmployeeRepository>(provider => new EmployeeRepository(connectionString));
             //services.AddControllersWithViews();
         }
 
@@ -32,7 +44,7 @@ namespace WebApplication4
                 Name = "Дима",
                 Surname = "Петров",
                 Phone = "354353",
-                CompanyId = new Random().Next(1, 13),
+                CompanyId = 345353,
                 Passport = new Passport("Ordinary Passport", Guid.NewGuid().ToString()),
                 Department = new  Department("Ozon", "67868684")
             },
@@ -43,7 +55,7 @@ namespace WebApplication4
                 Name = "Алла",
                 Surname = "Сергеева",
                 Phone = "8687687",
-                CompanyId = new Random().Next(1, 13),
+                CompanyId = 343242,
                 Passport = new Passport("Ordinary Passport", Guid.NewGuid().ToString()),
                 Department = new  Department("Oriflame", "456345645")
             },
@@ -54,16 +66,26 @@ namespace WebApplication4
                 Name = "Иван",
                 Surname = "Иванов",
                 Phone = "7865789",
-                CompanyId = new Random().Next(1, 13),
+                CompanyId = 34234324,
                 Passport = new Passport("Ordinary Passport", Guid.NewGuid().ToString()),
                 Department = new  Department("Ozon", "654645654")
             }
         };
 
         // получение всех пользователей
-        async Task GetAllPeople(HttpResponse response)
+        async Task GetAllEmployee(HttpResponse response)
         {
-            await response.WriteAsJsonAsync(employes);
+            var employees = _repo.GetEmployees();
+            if (employees != null)
+            {
+                await response.WriteAsJsonAsync(_repo.GetEmployees());
+            }
+            else
+            {
+                //response.StatusCode = 404;
+                await response.WriteAsJsonAsync(new { message = "Список пуст" });
+            }
+            
         }
         // получение одного пользовател¤ по id
         async Task GetPerson(int? id, HttpResponse response)
@@ -126,23 +148,20 @@ namespace WebApplication4
             }
         }
 
-        async Task CreatePerson(HttpResponse response, HttpRequest request)
+        async Task CreateEmployee(HttpResponse response, HttpRequest request)
         {
             try
             {
-                // получаем данные пользовател¤
                 var employe = await request.ReadFromJsonAsync<Employee>();
                 if (employe != null)
                 {
-                    // устанавливаем id дл¤ нового пользовател¤
-                    //employe.Id = new Random().Next(1, 13);
-                    // добавл¤ем пользовател¤ в список
-                    employes.Add(employe);
-                    await response.WriteAsJsonAsync(employe.Id);
+                    var emp = _repo.Create(employe);
+                    //employes.Add(employe);
+                    await response.WriteAsJsonAsync(emp.Id);
                 }
                 else
                 {
-                    throw new Exception("Ќекорректные данные");
+                    throw new Exception("Некорректные данные");
                 }
             }
             catch (Exception)
@@ -194,7 +213,7 @@ namespace WebApplication4
             }
         }
 
-        
+
 
 
 
@@ -205,6 +224,7 @@ namespace WebApplication4
         //    public int Age { get; set; }
         //}
 
+        
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
@@ -228,21 +248,27 @@ namespace WebApplication4
                 string expressionForGuid = @"^/api/users/$";
                 if (request.Method == "GET")
                 {
-                    if (path == "/api/users")
+                    if (path == "/api/employee")
                     {
-                        await GetAllPeople(response);
+                        await GetAllEmployee(response);
                     }
 
-                    if (Regex.IsMatch(path, @"^/api/users/\d{3}$"))
+                    //if (Regex.IsMatch(path, @"^/api/employee/\d{3}$"))
+                    //{
+                    if (path == "/api/employee/id/")
                     {
                         string? id = path.Value?.Split("/")[3];
                         await GetPerson(int.Parse(id), response);
                     }
+                    
+                   
+                        
+                    //}
 
                     //if (Regex.IsMatch(path, @"^/api/users/\d{3}$"))
                     //{
-                        string? departmentName = path.Value?.Split("/")[3];
-                        await GetEmployeForDepName(departmentName, response);
+                        //string? departmentName = path.Value?.Split("/")[3];
+                        //await GetEmployeForDepName(departmentName, response);
                     //}
 
 
@@ -263,7 +289,7 @@ namespace WebApplication4
                 // ƒобавл¤ть сотрудников, в ответ должен приходить Id добавленного сотрудника.
                 else if (path == "/api/users" && request.Method == "POST")
                 {
-                    await CreatePerson(response, request);
+                    await CreateEmployee(response, request);
                 }
                 else if (path == "/api/users" && request.Method == "PUT")
                 {
