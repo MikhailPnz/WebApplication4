@@ -17,26 +17,42 @@ namespace WebApplication4
     public class Startup
     {
         IEmployeeRepository _repo;
-        // This method gets called by the runtime. Use this method to add services to the container.
-        // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
+        
         public void ConfigureServices(IServiceCollection services)
         {
             string connectionString = "Host=pg_container;Username=root;Password=root;Database=test_db";
+            Init(connectionString);
+        }
+
+        void Init(string connectionString)
+        {
             _repo = new EmployeeRepository(connectionString);
-            //using (var connection = new NpgsqlConnection(connectionString))
-            //{
-            //    connection.Open();
-            //    connection.Execute("CREATE TABLE Employee (id serial primary key, Name CHARACTER VARYING(30), Surname CHARACTER VARYING(30)," +
-            //                       "Phone  CHARACTER VARYING(30), PasportName CHARACTER VARYING(30), PasportNumber CHARACTER VARYING(30)," +
-            //                       "DepName CHARACTER VARYING(30), DepPhone CHARACTER VARYING(30));");
-            //}
-            //connection.Execute("CREATE TABLE Users (Id INTEGER, Name CHARACTER VARYING(30), Age INTEGER);");
-            //services.AddTransient<IEmployeeRepository, EmployeeRepository>(provider => new EmployeeRepository(connectionString));
-            //services.AddControllersWithViews();
+            using (var connection = new NpgsqlConnection(connectionString))
+            {
+                connection.Open();
+                try
+                {
+                    connection.Execute("CREATE TABLE Employee (id serial primary key, Name CHARACTER VARYING(30), Surname CHARACTER VARYING(30)," +
+                                       "Phone  CHARACTER VARYING(30), CompanyId integer, PasportType CHARACTER VARYING(30), PasportNumber CHARACTER VARYING(30)," +
+                                       "DepName CHARACTER VARYING(30), DepPhone CHARACTER VARYING(30));");
+                }
+                catch
+                {
+                    Console.WriteLine("Таблица Emploee уже существует!");
+                }
+            }
+
+            if (_repo.GetEmployees().Count == 0)
+            {
+                foreach (var employe in _employes)
+                {
+                    _repo.Create(employe);
+                }
+            }
         }
 
         // начальные данные
-        List<Employee> employes = new List<Employee>
+        List<Employee> _employes = new List<Employee>
         {
             new()
             {
@@ -91,7 +107,7 @@ namespace WebApplication4
         async Task GetPerson(int? id, HttpResponse response)
         {
             // получаем пользовател¤ по id
-            Employee? emploe = employes.FirstOrDefault((u) => u.Id == id);
+            Employee? emploe = _employes.FirstOrDefault((u) => u.Id == id);
             // если пользователь найден, отправл¤ем его
             if (emploe != null)
                 await response.WriteAsJsonAsync(emploe);
@@ -109,7 +125,7 @@ namespace WebApplication4
             bool search = false;
             List<Employee> employesTemp = new List<Employee>();
 
-            foreach (var employe in employes)
+            foreach (var employe in _employes)
             {
                 if (employe.Department.Name == depName)
                 {
@@ -132,19 +148,26 @@ namespace WebApplication4
 
         async Task DeletePerson(int? id, HttpResponse response)
         {
-            // получаем пользовател¤ по id
-            Employee? employe = employes.FirstOrDefault((u) => u.Id == id);
-            // если пользователь найден, удал¤ем его
-            if (employe != null)
+            if (id != null)
             {
-                employes.Remove(employe);
-                await response.WriteAsJsonAsync(employe);
+                var id_ = (int)id;
+
+                Employee? employe = _repo.Get(id_);
+
+                if (employe != null)
+                {
+                    _repo.Delete(id_);
+                    await response.WriteAsJsonAsync(employe);
+                }
+                else
+                {
+                    response.StatusCode = 404;
+                    await response.WriteAsJsonAsync(new { message = "Сотрудник не найден" });
+                }
             }
-            // если не найден, отправл¤ем статусный код и сообщение об ошибке
             else
             {
-                response.StatusCode = 404;
-                await response.WriteAsJsonAsync(new { message = "—отрудник не найден" });
+                await response.WriteAsJsonAsync(new { message = "Неверный запрос, укажите id" });
             }
         }
 
@@ -153,11 +176,14 @@ namespace WebApplication4
             try
             {
                 var employe = await request.ReadFromJsonAsync<Employee>();
-                if (employe != null)
+                if (employe != null) // проверить существует ли уже такой сотрудник
                 {
                     var emp = _repo.Create(employe);
-                    //employes.Add(employe);
-                    await response.WriteAsJsonAsync(emp.Id);
+                    //_employes.Add(employe);
+
+                    var id = emp.Id;
+
+                    await response.WriteAsJsonAsync(id);
                 }
                 else
                 {
@@ -181,7 +207,7 @@ namespace WebApplication4
                 {
                     // foreach (var param in context.Request.Query)
                     // получаем пользовател¤ по id
-                    var employe = employes.FirstOrDefault(u => u.Id == userData.Id);
+                    var employe = _employes.FirstOrDefault(u => u.Id == userData.Id);
                     // если пользователь найден, измен¤ем его данные и отправл¤ем обратно клиенту
                     if (employe != null)
                     {
@@ -241,44 +267,38 @@ namespace WebApplication4
                 var request = context.Request;
                 var path = request.Path;
                 
-                //string expressionForNumber = "^/api/users/([0 - 9]+)$";   // если id представл¤ет число
-
+                string expressionForNumber = "^/api/employee/([0 - 9]+)$"; // id
+                string expressionForString = "^/api/employee/([a - z]+)$"; // name
                 // 2e752824-1657-4c7f-844b-6ec2e168e99c
                 //string expressionForGuid = @"^/api/users/\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$";
                 string expressionForGuid = @"^/api/users/$";
                 if (request.Method == "GET")
                 {
+                    // вывод всех сотрудников
                     if (path == "/api/employee")
                     {
                         await GetAllEmployee(response);
                     }
 
-                    //if (Regex.IsMatch(path, @"^/api/employee/\d{3}$"))
-                    //{
-                    if (path == "/api/employee/id/")
+                    // вывод сотрудника по id
+                    if (Regex.IsMatch(path, expressionForNumber))
                     {
                         string? id = path.Value?.Split("/")[3];
                         await GetPerson(int.Parse(id), response);
                     }
-                    
-                   
-                        
-                    //}
 
-                    //if (Regex.IsMatch(path, @"^/api/users/\d{3}$"))
-                    //{
-                        //string? departmentName = path.Value?.Split("/")[3];
-                        //await GetEmployeForDepName(departmentName, response);
-                    //}
-
-
+                    // вывод сотрудников по наименованию отдела
+                    if (Regex.IsMatch(path, expressionForString))
+                    {
+                        string? departmentName = path.Value?.Split("/")[3];
+                        await GetEmployeForDepName(departmentName, response);
+                    }
                 }
-                //else if (Regex.IsMatch(path, expressionForGuid) && request.Method == "GET")
-                //{
-                //    // получаем id из адреса url
-                //    string? id = path.Value?.Split("/")[3];
-                //    await GetPerson(int.Parse(id), response);
-                //}
+                else if (Regex.IsMatch(path, expressionForNumber) && request.Method == "GET")
+                {
+                    string? id = path.Value?.Split("/")[3];
+                    await GetPerson(int.Parse(id), response);
+                }
                 // Выводить список сотрудников для указанной компании.
                 //else if (Regex.IsMatch(path, expressionForGuid) && request.Method == "GET")
                 //{
@@ -286,23 +306,20 @@ namespace WebApplication4
                 //    string? departmentName = path.Value?.Split("/")[3];
                 //    await GetEmployeForDepName(departmentName, response);
                 //}
-                // ƒобавл¤ть сотрудников, в ответ должен приходить Id добавленного сотрудника.
-                else if (path == "/api/users" && request.Method == "POST")
+
+                // Добавление сотрудника, в ответ приходит его Id
+                else if (path == "/api/employee" && request.Method == "POST")
                 {
                     await CreateEmployee(response, request);
                 }
+
                 else if (path == "/api/users" && request.Method == "PUT")
                 {
                     await UpdatePerson(response, request);
                 }
-                // ”дал¤ть сотрудников по Id.
-                //else if (Regex.IsMatch(path, expressionForGuid) && request.Method == "DELETE")
+                // Удаление сотрудников по Id
                 else if (request.Method == "DELETE")
                 {
-                    //if (Regex.IsMatch(path, expressionForGuid))
-                    //{
-
-                    //}
                     string? id = path.Value?.Split("/")[3];
                     await DeletePerson(int.Parse(id), response);
                 }

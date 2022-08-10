@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using NpgsqlTypes;
 
 namespace WebApplication4.Models
 {
@@ -29,28 +30,10 @@ namespace WebApplication4.Models
             using (var connection = new NpgsqlConnection(connectionString))
             {
                 connection.Open();
-
-                //Id int
-                //    Name string
-                //    Surname string
-                //    Phone string
-                //    CompanyId int
-                //Passport {
-                //    Type string
-                //        Number string
-                //}
-                //Department {
-                //    Name string
-                //        Phone string
-
-                //create table users(
-                //    id serial primary key,
-                //    name varchar(100) not null unique-- ?
-                //);
-
-                var sqlQuery = "INSERT INTO Employee (Name) VALUES(@Name) RETURNING id";
-                int? userId = connection.Execute(sqlQuery, employee);
-                employee.Id = userId.Value;
+                var sqlQuery = "INSERT INTO Employee (Name, Surname, Phone, CompanyId, PasportType, PasportNumber, DepName, DepPhone) " +
+                               "VALUES(@Name, @Surname, @Phone, @CompanyId, @PasportType, @PasportNumber, @DepName, @DepPhone) RETURNING id";
+                var userId = connection.ExecuteScalar(sqlQuery, employee);
+                employee.Id = (int)userId;
                 return employee;
             }
         }
