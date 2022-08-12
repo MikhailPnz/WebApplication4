@@ -201,14 +201,11 @@ namespace WebApplication4
         {
             try
             {
-                // получаем данные пользовател¤
                 Employee? userData = await request.ReadFromJsonAsync<Employee>();
                 if (userData != null)
                 {
-                    // foreach (var param in context.Request.Query)
-                    // получаем пользовател¤ по id
-                    var employe = _employes.FirstOrDefault(u => u.Id == userData.Id);
-                    // если пользователь найден, измен¤ем его данные и отправл¤ем обратно клиенту
+                    var employe = _repo.Get(userData.Id);
+                    // если пользователь найден, изменяем его данные и отправляем обратно клиенту
                     if (employe != null)
                     {
                         employe.Id = userData.Id;
@@ -219,12 +216,16 @@ namespace WebApplication4
                         employe.Passport = userData.Passport; // исправить
                         employe.Department = userData.Department;
 
+                        // записать в бд
+
+                        _repo.Update(employe);
+
                         await response.WriteAsJsonAsync(employe.Id);
                     }
                     else
                     {
                         response.StatusCode = 404;
-                        await response.WriteAsJsonAsync(new { message = "ѕользователь не найден" });
+                        await response.WriteAsJsonAsync(new { message = "пользователь не найден" });
                     }
                 }
                 else
@@ -268,10 +269,10 @@ namespace WebApplication4
                 var path = request.Path;
                 
                 string expressionForNumber = "^/api/employee/([0 - 9]+)$"; // id
-                string expressionForString = "^/api/employee/([a - z]+)$"; // name
+                string expressionForString = "^/api/employee/([a - z]+)$"; // отделение
                 // 2e752824-1657-4c7f-844b-6ec2e168e99c
                 //string expressionForGuid = @"^/api/users/\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$";
-                string expressionForGuid = @"^/api/users/$";
+                //string expressionForGuid = @"^/api/users/$";
                 if (request.Method == "GET")
                 {
                     // вывод всех сотрудников
@@ -312,7 +313,7 @@ namespace WebApplication4
                 {
                     await CreateEmployee(response, request);
                 }
-
+                // изменение сотрудника по Id
                 else if (path == "/api/users" && request.Method == "PUT")
                 {
                     await UpdatePerson(response, request);
