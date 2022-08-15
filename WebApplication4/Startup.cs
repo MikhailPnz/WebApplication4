@@ -32,83 +32,19 @@ namespace WebApplication4
                 connection.Open();
                 try
                 {
-                    //connection.Execute("CREATE TABLE Employee (id serial primary key, Name CHARACTER VARYING(30), Surname CHARACTER VARYING(30)," +
-                    //                   "Phone  CHARACTER VARYING(30), CompanyId integer, PasportType CHARACTER VARYING(30), PasportNumber CHARACTER VARYING(30)," +
-                    //                   "DepName CHARACTER VARYING(30), DepPhone CHARACTER VARYING(30));");
+                    connection.Execute("CREATE TABLE Department(Id SERIAL PRIMARY KEY,DepartmentName VARCHAR(30) NOT NULL," +
+                                       "DepartmentPhone VARCHAR(30) NOT NULL);");
 
-                    // тест
+                    connection.Execute("CREATE TABLE Passport(Id SERIAL PRIMARY KEY, Type VARCHAR(30) NOT NULL, Number CHARACTER VARYING(100) NOT NULL);");
 
-                    //connection.Execute("CREATE TABLE main(main_id serial PRIMARY KEY, main_text text); " +
-                    //                   "CREATE TABLE age(main_id integer REFERENCES main(main_id) PRIMARY KEY, birthdate date NOT NULL, CHECK(birthdate <= now()));" +
-                    //                   "CREATE TABLE preferred_colours(main_id integer NOT NULL REFERENCES main(main_id), colour text NOT NULL, PRIMARY KEY(main_id, colour));");
-
-                    //connection.Execute("INSERT INTO main(main_text)VALUES('Main text');");
-
-
-
-                    connection.Execute("CREATE TABLE Department (Id serial primary key, Name CHARACTER VARYING(30), Phone  CHARACTER VARYING(30));");
-
-                    connection.Execute("CREATE TABLE Passport (Id serial primary key, Type CHARACTER VARYING(30), Number  CHARACTER VARYING(30));");
-
-                    connection.Execute("CREATE TABLE Employee (Id serial primary key, Name CHARACTER VARYING(30), Surname CHARACTER VARYING(30), Phone  CHARACTER VARYING(30), " +
-                                       "CompanyId integer NOT NULL REFERENCES Department(Id) ON DELETE CASCADE, PassportId integer NOT NULL REFERENCES Passport(Id) ON DELETE CASCADE;");
-
-
-
-                    // добавление 1 сотрудника
-
-                    // получить список компаний, если такой компании нет создать
-                    var nameDep = connection.Query<Employee>("SELECT * FROM Department WHERE Name = @Name", new { Name }).FirstOrDefault();
-                    // если такой компании нет, добавляем ее
-                    if (nameDep == null)
-                    {
-                        var sqlQuery = "INSERT INTO Department (Name, Phone) VALUES(@Name, @Phone)";
-                    }
-
-                    // получить список типа паспортов, если такого нет добавить
-                    var typeDep = connection.Query<Employee>("SELECT * FROM Passport WHERE Type = @Type", new { Type }).FirstOrDefault();
-                    // если такого типа паспорта нет, добавить
-                    if (typeDep == null)
-                    {
-                        var sqlQuery = "INSERT INTO Passport (Type, Number) VALUES(@Type, @Number)";
-                    }
-
-                    // нужно ли проверять уникальность сотрудника?
-
-                    // вернет всех сотрудников
-                    var employee = connection.Query<Employee>("SELECT * FROM Department, Passport, Employee WHERE Employee.CompanyId = Department.Id AND Employee.PassportId=Passport.Id").FirstOrDefault();
-
-                    // добавить сотрудника + соединить id департамента и id паспорта
-                    var sqlQuery = "INSERT INTO Employee (Name, Surname, Phone, CompanyId, PassportId) VALUES(@Name, @Surname, @Phone, (SELECT Id FROM Department WHERE Name = @Name)) RETURNING id";
-
-
-
-                    INSERT INTO Orders(ProductId, CustomerId, CreatedAt, ProductCount, Price)
-                    VALUES
-                    (
-                        (SELECT Id FROM Products WHERE ProductName = 'Galaxy S9'), 
-                    (SELECT Id FROM Customers WHERE FirstName = 'Tom'),
-                    '2017-07-11',  
-                    2, 
-                    (SELECT Price FROM Products WHERE ProductName = 'Galaxy S9')
-                        ),
-
-                    var sqlQuery = "INSERT INTO Employee (Name, Surname, Phone) VALUES(@Name, @Surname, @Phone) RETURNING id";
-                    //var userId = connection.ExecuteScalar(sqlQuery, employee);
-                    // заполнение departament
-                    var sqlQuery = "INSERT INTO Employee (Name, Surname, Phone) VALUES(@Name, @Surname, @Phone) RETURNING id";
-
-                    var sqlQuery = "INSERT INTO Department (Name, Phone) " +
-                                   "VALUES('Name', 'Surnam') RETURNING id";
-                    var userId = connection.ExecuteScalar(sqlQuery);
-
-                    var sqlQuer = "INSERT INTO Employee (Name) " +
-                                   "VALUES('Name')";
-                    connection.Execute(sqlQuer);
-
+                    connection.Execute("CREATE TABLE Employee(Id SERIAL PRIMARY KEY, EmployeeName CHARACTER VARYING(30) NOT NULL," +
+                                       "Surname CHARACTER VARYING(30) NOT NULL, Phone  CHARACTER VARYING(30) NOT NULL," +
+                                       "CompanyId INTEGER NOT NULL REFERENCES Department(Id) ON DELETE CASCADE," +
+                                       "PassportId INTEGER NOT NULL REFERENCES Passport(Id) ON DELETE CASCADE);");
                 }
                 catch
                 {
+                    // исключение
                     Console.WriteLine("Таблица Emploee уже существует!");
                 }
             }
@@ -128,7 +64,7 @@ namespace WebApplication4
             new()
             {
                 Id = 25,
-                Name = "Дима",
+                EmployeeName = "Дима",
                 Surname = "Петров",
                 Phone = "354353",
                 CompanyId = 345353,
@@ -139,7 +75,7 @@ namespace WebApplication4
             new()
             {
                 Id = 32,
-                Name = "Алла",
+                EmployeeName = "Алла",
                 Surname = "Сергеева",
                 Phone = "8687687",
                 CompanyId = 343242,
@@ -150,7 +86,7 @@ namespace WebApplication4
             new()
             {
                 Id = 41,
-                Name = "Иван",
+                EmployeeName = "Иван",
                 Surname = "Иванов",
                 Phone = "7865789",
                 CompanyId = 34234324,
@@ -198,7 +134,7 @@ namespace WebApplication4
 
             foreach (var employe in _employes)
             {
-                if (employe.Department.Name == depName)
+                if (employe.Department.DepartmentName == depName)
                 {
                     employesTemp.Add(employe);
                     search = true;
@@ -280,7 +216,7 @@ namespace WebApplication4
                     if (employe != null)
                     {
                         employe.Id = userData.Id;
-                        employe.Name = userData.Name;
+                        employe.EmployeeName = userData.EmployeeName;
                         employe.Surname = userData.Surname;
                         employe.Phone = userData.Phone;
                         employe.CompanyId = userData.CompanyId;

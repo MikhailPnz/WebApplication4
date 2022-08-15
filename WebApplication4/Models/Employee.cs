@@ -20,25 +20,26 @@ namespace WebApplication4.Models
     }
     public class Department
     {
-        public string Name { get; set; } = "";
-        public string Phone { get; set; } = "";
+        public string DepartmentName { get; set; } = "";
+        public string DepartmentPhone { get; set; } = "";
 
         public Department() { }
 
         public Department(string name, string phone)
         {
-            Name = name;
-            Phone = phone;
+            DepartmentName = name;
+            DepartmentPhone = phone;
         }
     }
 
     public class Employee
     {
         public int Id { get; set; }
-        public string Name { get; set; } = "";
+        public string EmployeeName { get; set; } = "";
         public string Surname { get; set; } = "";
         public string Phone { get; set; } = "";
         public int CompanyId { get; set; }
+        public int PassportId { get; set; }
         public Passport Passport { get; set; }
         public Department Department { get; set; }
     }
