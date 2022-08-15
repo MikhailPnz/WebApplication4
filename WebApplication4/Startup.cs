@@ -45,16 +45,15 @@ namespace WebApplication4
                 catch
                 {
                     // исключение
+                    //throw new Exception();
                     Console.WriteLine("Таблица Emploee уже существует!");
                 }
             }
 
-            if (_repo.GetEmployees().Count == 0)
+            // test
+            foreach (var employe in _employes)
             {
-                foreach (var employe in _employes)
-                {
-                    _repo.Create(employe);
-                }
+                _repo.Create(employe);
             }
         }
 
@@ -95,75 +94,33 @@ namespace WebApplication4
             }
         };
 
-        // получение всех пользователей
-        async Task GetAllEmployee(HttpResponse response)
-        {
-            var employees = _repo.GetEmployees();
-            if (employees != null)
-            {
-                await response.WriteAsJsonAsync(_repo.GetEmployees());
-            }
-            else
-            {
-                //response.StatusCode = 404;
-                await response.WriteAsJsonAsync(new { message = "Список пуст" });
-            }
-            
-        }
-        // получение одного пользовател¤ по id
-        async Task GetPerson(int? id, HttpResponse response)
-        {
-            // получаем пользовател¤ по id
-            Employee? emploe = _employes.FirstOrDefault((u) => u.Id == id);
-            // если пользователь найден, отправл¤ем его
-            if (emploe != null)
-                await response.WriteAsJsonAsync(emploe);
-            // если не найден, отправл¤ем статусный код и сообщение об ошибке
-            else
-            {
-                response.StatusCode = 404;
-                await response.WriteAsJsonAsync(new { message = "Пользователь не найден" });
-            }
-        }
-
         // получение списка работников по названию компании
-        async Task GetEmployeForDepName(string? depName, HttpResponse response)
+        async Task GetListEmployesForDepName(string? depName, HttpResponse response)
         {
-            bool search = false;
-            List<Employee> employesTemp = new List<Employee>();
-
-            foreach (var employe in _employes)
+            var employesForDepName = _repo.GetEmployesForDepName(depName);
+            if (employesForDepName != null)
             {
-                if (employe.Department.DepartmentName == depName)
-                {
-                    employesTemp.Add(employe);
-                    search = true;
-                }
-            }
-
-            if (search)
-            {
-                await response.WriteAsJsonAsync(employesTemp);
-                employesTemp.Clear();
+                await response.WriteAsJsonAsync(employesForDepName);
             }
             else
             {
                 response.StatusCode = 404;
                 await response.WriteAsJsonAsync(new { message = "Совпадений не найдено" });
             }
+            
         }
 
         async Task DeletePerson(int? id, HttpResponse response)
         {
             if (id != null)
             {
-                var id_ = (int)id;
+                var employeeId = (int)id;
 
-                Employee? employe = _repo.Get(id_);
+                Employee? employe = _repo.Get(employeeId);
 
                 if (employe != null)
                 {
-                    _repo.Delete(id_);
+                    _repo.Delete(employeeId);
                     await response.WriteAsJsonAsync(employe);
                 }
                 else
@@ -174,7 +131,7 @@ namespace WebApplication4
             }
             else
             {
-                await response.WriteAsJsonAsync(new { message = "Неверный запрос, укажите id" });
+                await response.WriteAsJsonAsync(new { message = "Неверный запрос, укажите id сотрудника" });
             }
         }
 
@@ -183,14 +140,18 @@ namespace WebApplication4
             try
             {
                 var employe = await request.ReadFromJsonAsync<Employee>();
-                if (employe != null) // проверить существует ли уже такой сотрудник
+                if (employe != null)
                 {
-                    var emp = _repo.Create(employe);
-                    //_employes.Add(employe);
-
-                    var id = emp.Id;
-
-                    await response.WriteAsJsonAsync(id);
+                    var id = _repo.Create(employe);
+                    if (id != null)
+                    {
+                        // сотрудник добавлен
+                        await response.WriteAsJsonAsync(id);
+                    }
+                    else
+                    {
+                        throw new Exception("Сотрудник уже существует");
+                    }
                 }
                 else
                 {
@@ -200,7 +161,7 @@ namespace WebApplication4
             catch (Exception)
             {
                 response.StatusCode = 400;
-                await response.WriteAsJsonAsync(new { message = "Ќекорректные данные" });
+                await response.WriteAsJsonAsync(new { message = "Некорректные данные" });
             }
         }
 
@@ -211,20 +172,48 @@ namespace WebApplication4
                 Employee? userData = await request.ReadFromJsonAsync<Employee>();
                 if (userData != null)
                 {
+                    // получить сотрудника
                     var employe = _repo.Get(userData.Id);
                     // если пользователь найден, изменяем его данные и отправляем обратно клиенту
                     if (employe != null)
                     {
-                        employe.Id = userData.Id;
-                        employe.EmployeeName = userData.EmployeeName;
-                        employe.Surname = userData.Surname;
-                        employe.Phone = userData.Phone;
-                        employe.CompanyId = userData.CompanyId;
-                        employe.Passport = userData.Passport; // исправить
-                        employe.Department = userData.Department;
+                        // изменить поля
+                        if (!string.IsNullOrEmpty(userData.EmployeeName))
+                        {
+                            employe.EmployeeName = userData.EmployeeName;
+                        }
+
+                        if (!string.IsNullOrEmpty(userData.Surname))
+                        {
+                            employe.Surname = userData.Surname;
+                        }
+
+                        if (!string.IsNullOrEmpty(userData.Phone))
+                        {
+                            employe.Phone = userData.Phone;
+                        }
+
+                        if (!string.IsNullOrEmpty(userData.Department.DepartmentName))
+                        {
+                            employe.Department.DepartmentName = userData.Department.DepartmentName;
+                        }
+
+                        if (!string.IsNullOrEmpty(userData.Department.DepartmentPhone))
+                        {
+                            employe.Department.DepartmentPhone = userData.Department.DepartmentPhone;
+                        }
+
+                        if (!string.IsNullOrEmpty(userData.Passport.Type)) // ссылка на нулевой объект
+                        {
+                            employe.Passport.Type = userData.Passport.Type;
+                        }
+
+                        if (!string.IsNullOrEmpty(userData.Passport.Number))
+                        {
+                            employe.Passport.Number = userData.Passport.Number;
+                        }
 
                         // записать в бд
-
                         _repo.Update(employe);
 
                         await response.WriteAsJsonAsync(employe.Id);
@@ -237,28 +226,16 @@ namespace WebApplication4
                 }
                 else
                 {
-                    throw new Exception("Ќекорректные данные");
+                    throw new Exception("Некорректные данные");
                 }
             }
             catch (Exception)
             {
                 response.StatusCode = 400;
-                await response.WriteAsJsonAsync(new { message = "Ќекорректные данные" });
+                await response.WriteAsJsonAsync(new { message = "Некорректные данные" });
             }
         }
 
-
-
-
-
-
-
-        //    public string Id { get; set; } = "";
-        //    public string Name { get; set; } = "";
-        //    public int Age { get; set; }
-        //}
-
-        
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
@@ -274,54 +251,25 @@ namespace WebApplication4
                 var response = context.Response;
                 var request = context.Request;
                 var path = request.Path;
-                
-                string expressionForNumber = "^/api/employee/([0 - 9]+)$"; // id
-                string expressionForString = "^/api/employee/([a - z]+)$"; // отделение
-                // 2e752824-1657-4c7f-844b-6ec2e168e99c
+                /*
+                string expressionForString = "^/api/employee/(.+?)"; // отделение
                 //string expressionForGuid = @"^/api/users/\w{8}-\w{4}-\w{4}-\w{4}-\w{12}$";
-                //string expressionForGuid = @"^/api/users/$";
                 if (request.Method == "GET")
                 {
-                    // вывод всех сотрудников
-                    if (path == "/api/employee")
-                    {
-                        await GetAllEmployee(response);
-                    }
-
-                    // вывод сотрудника по id
-                    if (Regex.IsMatch(path, expressionForNumber))
-                    {
-                        string? id = path.Value?.Split("/")[3];
-                        await GetPerson(int.Parse(id), response);
-                    }
-
-                    // вывод сотрудников по наименованию отдела
+                    // вывод сотрудников по наименованию компании
                     if (Regex.IsMatch(path, expressionForString))
                     {
                         string? departmentName = path.Value?.Split("/")[3];
-                        await GetEmployeForDepName(departmentName, response);
+                        await GetListEmployesForDepName(departmentName, response);
                     }
                 }
-                else if (Regex.IsMatch(path, expressionForNumber) && request.Method == "GET")
-                {
-                    string? id = path.Value?.Split("/")[3];
-                    await GetPerson(int.Parse(id), response);
-                }
-                // Выводить список сотрудников для указанной компании.
-                //else if (Regex.IsMatch(path, expressionForGuid) && request.Method == "GET")
-                //{
-                //    // получаем id из адреса url
-                //    string? departmentName = path.Value?.Split("/")[3];
-                //    await GetEmployeForDepName(departmentName, response);
-                //}
-
                 // Добавление сотрудника, в ответ приходит его Id
-                else if (path == "/api/employee" && request.Method == "POST")
+                if (path == "/api/employee" && request.Method == "POST")
                 {
                     await CreateEmployee(response, request);
                 }
                 // изменение сотрудника по Id
-                else if (path == "/api/users" && request.Method == "PUT")
+                else if (path == "/api/employee" && request.Method == "PUT")
                 {
                     await UpdatePerson(response, request);
                 }
@@ -330,12 +278,40 @@ namespace WebApplication4
                 {
                     string? id = path.Value?.Split("/")[3];
                     await DeletePerson(int.Parse(id), response);
+                }*/
+
+                // JSON
+
+                // вывод сотрудников по наименованию компании
+                if (request.Method == "GET")
+                {
+                    var employe = await request.ReadFromJsonAsync<Employee>();
+                    if (employe != null)
+                    {
+                        await GetListEmployesForDepName(employe.Department.DepartmentName, response);
+                    }
                 }
-                //else
-                //{
-                //    response.ContentType = "text/html; charset=utf-8";
-                //    //await response.SendFileAsync("html/index.html");
-                //}
+
+                // Добавление сотрудника, в ответ приходит его Id
+                else if (request.Method == "POST")
+                {
+                    await CreateEmployee(response, request);
+                }
+                // изменение сотрудника по Id
+                else if (request.Method == "PUT")
+                {
+                    await UpdatePerson(response, request);
+                }
+                // Удаление сотрудников по Id
+                else if (request.Method == "DELETE")
+                {
+                    var employe = await request.ReadFromJsonAsync<Employee>();
+                    if (employe != null)
+                    {
+                        await DeletePerson(employe.Id, response);
+                    }
+                }
+
             });
         }
     }
