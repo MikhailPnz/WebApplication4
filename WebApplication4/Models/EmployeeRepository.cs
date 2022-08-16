@@ -57,7 +57,7 @@ namespace WebApplication4.Models
 
                 // у каждого сотрудника свой номер паспорта и он уникален
                 var typePassport = connection.Query<Passport>("SELECT * FROM Passport WHERE Number = @Number", new { employee.Passport.Number }).FirstOrDefault();
-                // если такого номера паспорта нет, то и сотрудника нет
+                // если совпадений нет добавляем
                 if (typePassport == null)
                 {
                     // получить список компаний, если такой компании нет создать
@@ -93,41 +93,9 @@ namespace WebApplication4.Models
                 }
                 else
                 {
+                    // если есть совпадение проверяем сотрудника
                     return null;
                 }
-
-                // проверить, есть ли такой сотрудник
-                //var employeeSQL = "SELECT * FROM Department, Passport, Employee WHERE Employee.EmployeeName = @EmployeeName AND Employee.Surname = @Surname AND Passport.Number = @Number";
-                //var employeeGet = connection.Query<EmployeeBD>(employeeSQL, new { employee.EmployeeName, employee.Surname, employee.Passport.Number}).FirstOrDefault();
-
-                //bool addEmployee = false;
-
-                // если совпадений нет добавить сотрудника
-                //if (employeeGet != null)
-                //{
-                //    // проверить на соответствие
-                //    var newEmployee = new Employee()
-                //    {
-                //        Id = employeeGet.Id,
-                //        EmployeeName = employeeGet.EmployeeName,
-                //        Surname = employeeGet.Surname,
-                //        Phone = employeeGet.Phone,
-                //        CompanyId = employeeGet.CompanyId,
-                //        PassportId = employeeGet.PassportId,
-                //        Passport = new Passport(employeeGet.Type, employeeGet.Number),
-                //        Department = new Department(employeeGet.DepartmentName, employeeGet.DepartmentPhone)
-                //    };
-
-                //    // сравнить поля без Id
-                //    if (!Equals(employee, newEmployee))
-                //    {
-                //        addEmployee = true;
-                //    }
-                //}
-                //else
-                //{
-                //    addEmployee = true;
-                //}
             }
         }
 
@@ -210,26 +178,13 @@ namespace WebApplication4.Models
                                "WHERE Department.Id = (SELECT CompanyId FROM Employee WHERE Id = @id);";
                 connection.Execute(departSQL, new { employee.Department.DepartmentName, employee.Department.DepartmentPhone, employee.Id });
 
-                //var sqlQuery = "DELETE FROM Passport WHERE Passport.Id = (SELECT PassportId FROM Employee WHERE Id = @id); DELETE FROM Employee WHERE Id = @id";
-                //connection.Execute(sqlQuery, new { id });
+                var passportSQL = "UPDATE Passport SET Type = @Type, Number = @Number " +
+                                "WHERE Passport.Id = (SELECT PassportId FROM Employee WHERE Id = @id);";
+                connection.Execute(passportSQL, new { employee.Passport.Type, employee.Passport.Number, employee.Id });
 
-                //var sqlQuery = "UPDATE Employee SET Name = @Name, Age = @Age WHERE Id = @Id";
-
-                //StringBuilder updateSQL = new StringBuilder();
-                //// изменить сотрудника + соединить id департамента и id паспорта
-                //updateSQL.Append("INSERT INTO Employee (EmployeeName, Surname, Phone, CompanyId, PassportId) VALUES ('");
-                //updateSQL.Append(employee.EmployeeName);
-                //updateSQL.Append("','");
-                //updateSQL.Append(employee.Surname);
-                //updateSQL.Append("','");
-                //updateSQL.Append(employee.Phone);
-                //updateSQL.Append("', (SELECT Id FROM Department WHERE DepartmentName='");
-                //updateSQL.Append(employee.Department.DepartmentName);
-                //updateSQL.Append("'), (SELECT Id FROM Passport WHERE Number='");
-                //updateSQL.Append(employee.Passport.Number);
-                //updateSQL.Append("')) RETURNING id;");
-
-                //connection.Execute(updateSQL.ToString(), employee);
+                
+                var emplSQL = "UPDATE Employee SET EmployeeName = @EmployeeName, Surname = @Surname, Phone = @Phone WHERE Id = @Id";
+                connection.Execute(emplSQL, new { employee.EmployeeName, employee.Surname, employee.Phone });
             }
         }
     }

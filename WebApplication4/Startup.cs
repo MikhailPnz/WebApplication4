@@ -193,25 +193,32 @@ namespace WebApplication4
                             employe.Phone = userData.Phone;
                         }
 
-                        if (!string.IsNullOrEmpty(userData.Department.DepartmentName))
+                        if (userData.Department != null)
                         {
-                            employe.Department.DepartmentName = userData.Department.DepartmentName;
-                        }
+                            if (!string.IsNullOrEmpty(userData.Department.DepartmentName))
+                            {
+                                employe.Department.DepartmentName = userData.Department.DepartmentName;
+                            }
 
-                        if (!string.IsNullOrEmpty(userData.Department.DepartmentPhone))
-                        {
-                            employe.Department.DepartmentPhone = userData.Department.DepartmentPhone;
+                            if (!string.IsNullOrEmpty(userData.Department.DepartmentPhone))
+                            {
+                                employe.Department.DepartmentPhone = userData.Department.DepartmentPhone;
+                            }
                         }
+                        
+                        if (userData.Passport != null)
+                        {
+                            if (!string.IsNullOrEmpty(userData.Passport.Type))
+                            {
+                                employe.Passport.Type = userData.Passport.Type;
+                            }
 
-                        if (!string.IsNullOrEmpty(userData.Passport.Type)) // ссылка на нулевой объект
-                        {
-                            employe.Passport.Type = userData.Passport.Type;
+                            if (!string.IsNullOrEmpty(userData.Passport.Number))
+                            {
+                                employe.Passport.Number = userData.Passport.Number;
+                            }
                         }
-
-                        if (!string.IsNullOrEmpty(userData.Passport.Number))
-                        {
-                            employe.Passport.Number = userData.Passport.Number;
-                        }
+                        
 
                         // записать в бд
                         _repo.Update(employe);
